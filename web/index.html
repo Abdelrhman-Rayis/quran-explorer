@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quran Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d1117;
+      --surface: #161b22;
+      --card:    #1c2129;
+      --border:  #30363d;
+      --accent:  #c9a84c;
+      --accent2: #e8c97a;
+      --text:    #e6edf3;
+      --muted:   #7d8590;
+      --hover:   #1f2837;
+      --active:  #243045;
+      --noun:    #58a6ff;
+      --verb:    #3fb950;
+      --adj:     #d2a8ff;
+      --prep:    #ff7b72;
+      --pron:    #ffa657;
+      --det:     #79c0ff;
+      --part:    #f0883e;
+      --other:   #8b949e;
+      --radius:  8px;
+    }
+
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+    /* Header */
+    header { display:flex; align-items:center; gap:14px; padding:10px 20px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; direction:ltr; }
+    .logo { font-family:'Amiri',serif; font-size:1.5rem; color:var(--accent); white-space:nowrap; }
+    .search-wrap { flex:1; position:relative; max-width:460px; }
+    .search-wrap input { width:100%; padding:8px 38px 8px 14px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); color:var(--text); font-family:'Amiri',serif; font-size:1.05rem; outline:none; direction:rtl; }
+    .search-wrap input:focus { border-color:var(--accent); }
+    .search-wrap input::placeholder { font-family:'Inter',sans-serif; font-size:0.85rem; color:var(--muted); }
+    .search-btn { position:absolute; left:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--muted); font-size:1.1rem; line-height:1; }
+    .search-btn:hover { color:var(--accent); }
+    .stats { color:var(--muted); font-size:0.78rem; white-space:nowrap; }
+
+    /* Layout */
+    .layout { display:flex; flex:1; overflow:hidden; }
+
+    /* Sidebar */
+    aside { width:255px; flex-shrink:0; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; direction:ltr; }
+    .sidebar-header { padding:10px 14px; border-bottom:1px solid var(--border); font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+    .chapter-list { overflow-y:auto; flex:1; }
+    .chapter-list::-webkit-scrollbar { width:3px; }
+    .chapter-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+    .chapter-item { display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; transition:background .12s; }
+    .chapter-item:hover { background:var(--hover); }
+    .chapter-item.active { background:var(--active); border-right:3px solid var(--accent); }
+    .ch-num { width:26px; height:26px; border-radius:50%; background:var(--bg); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:0.65rem; color:var(--muted); flex-shrink:0; }
+    .chapter-item.active .ch-num { background:var(--accent); color:#000; border-color:var(--accent); font-weight:700; }
+    .ch-info { flex:1; min-width:0; }
+    .ch-name-en { font-size:0.8rem; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ch-name-ar { font-family:'Amiri',serif; font-size:0.9rem; color:var(--accent); direction:rtl; }
+    .ch-meta { font-size:0.65rem; color:var(--muted); }
+
+    /* Main */
+    main { flex:1; overflow-y:auto; padding:28px 44px; direction:rtl; }
+    main::-webkit-scrollbar { width:5px; }
+    main::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+    /* Chapter heading */
+    .chapter-heading { text-align:center; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+    .chapter-heading .ar-name { font-family:'Amiri',serif; font-size:2.6rem; color:var(--accent); line-height:1.2; }
+    .chapter-heading .en-name { font-family:'Inter',sans-serif; font-size:0.95rem; color:var(--muted); direction:ltr; margin-top:4px; }
+    .chapter-heading .ch-stats { font-family:'Inter',sans-serif; font-size:0.75rem; color:var(--muted); direction:ltr; margin-top:2px; }
+    .bismillah { text-align:center; font-family:'Amiri',serif; font-size:1.8rem; color:var(--accent2); margin-bottom:24px; line-height:1.8; }
+
+    /* Verses */
+    .verse { display:flex; align-items:flex-start; gap:14px; padding:14px 10px; cursor:pointer; transition:background .1s; border-radius:var(--radius); border-bottom:1px solid var(--border); }
+    .verse:hover { background:var(--hover); }
+    .verse.selected { background:var(--active); }
+    .verse-num { width:32px; height:32px; border-radius:50%; background:var(--bg); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:0.7rem; color:var(--muted); flex-shrink:0; direction:ltr; font-family:'Inter',sans-serif; }
+    .verse.selected .verse-num { background:var(--accent); color:#000; border-color:var(--accent); font-weight:700; }
+    .verse-text { font-family:'Amiri',serif; font-size:1.55rem; line-height:2.0; color:var(--text); flex:1; }
+
+    /* Token panel */
+    .token-panel { margin-top:10px; display:none; }
+    .token-panel.open { display:block; }
+    .token-list { display:flex; flex-wrap:wrap; gap:8px; direction:rtl; }
+
+    /* Token chip */
+    .token-chip { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:8px 12px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s; position:relative; }
+    .token-chip:hover { border-color:var(--accent); background:var(--hover); }
+    .token-chip.chip-selected { border-color:var(--accent); background:var(--active); }
+    .t-ar  { font-family:'Amiri',serif; font-size:1.25rem; color:var(--accent2); direction:rtl; display:block; }
+    .t-pos { font-size:0.6rem; font-weight:600; padding:1px 5px; border-radius:4px; direction:ltr; display:inline-block; margin-top:3px; }
+    .pos-noun  { background:rgba(88,166,255,.15);  color:var(--noun); }
+    .pos-verb  { background:rgba(63,185,80,.15);   color:var(--verb); }
+    .pos-adj   { background:rgba(210,168,255,.15); color:var(--adj);  }
+    .pos-prep  { background:rgba(255,123,114,.15); color:var(--prep); }
+    .pos-pron  { background:rgba(255,166,87,.15);  color:var(--pron); }
+    .pos-det   { background:rgba(121,192,255,.15); color:var(--det);  }
+    .pos-part  { background:rgba(240,136,62,.15);  color:var(--part); }
+    .pos-other { background:rgba(139,148,158,.15); color:var(--other);}
+
+    /* Morphology detail card */
+    .morph-card { margin-top:10px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px; direction:ltr; }
+    .morph-card h4 { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
+    .seg-block { margin-bottom:10px; padding:10px; background:var(--card); border-radius:var(--radius); border-left:3px solid var(--border); }
+    .seg-block:last-child { margin-bottom:0; }
+    .seg-block.type-prefix { border-left-color:var(--det);  }
+    .seg-block.type-stem   { border-left-color:var(--accent); }
+    .seg-block.type-suffix { border-left-color:var(--pron); }
+    .seg-type { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px; }
+    .seg-form { font-family:'Amiri',serif; font-size:1.4rem; color:var(--accent2); direction:rtl; margin-bottom:6px; }
+    .feat-grid { display:flex; flex-wrap:wrap; gap:5px; }
+    .feat-chip { font-size:0.7rem; padding:2px 8px; border-radius:4px; background:var(--surface); border:1px solid var(--border); color:var(--text); }
+    .feat-chip .fk { color:var(--muted); margin-right:3px; }
+    .feat-chip.highlight { border-color:var(--accent); color:var(--accent2); }
+
+    /* Search results */
+    .search-header { font-family:'Inter',sans-serif; font-size:0.82rem; color:var(--muted); direction:ltr; margin-bottom:18px; }
+    .search-header span { color:var(--accent); font-weight:600; }
+    .result-item { padding:14px 10px; border-bottom:1px solid var(--border); cursor:pointer; border-radius:var(--radius); transition:background .1s; }
+    .result-item:hover { background:var(--hover); }
+    .result-meta { font-family:'Inter',sans-serif; font-size:0.72rem; color:var(--muted); direction:ltr; margin-bottom:6px; }
+    .result-text { font-family:'Amiri',serif; font-size:1.4rem; line-height:1.9; color:var(--text); }
+    mark { background:rgba(201,168,76,.3); color:var(--accent2); border-radius:3px; padding:0 2px; }
+
+    /* Loading */
+    .center-msg { text-align:center; padding:70px 20px; color:var(--muted); direction:ltr; }
+    .center-msg .big { font-family:'Amiri',serif; font-size:3rem; color:var(--accent); margin-bottom:12px; }
+    .center-msg p { font-size:0.88rem; }
+    .spinner { display:inline-block; width:24px; height:24px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; margin-bottom:10px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">القرآن الكريم</div>
+  <div class="search-wrap">
+    <input id="searchInput" type="text" placeholder="Search in Arabic…" />
+    <button class="search-btn" onclick="doSearch()">⌕</button>
+  </div>
+  <div class="stats" id="statsBar">Loading…</div>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="sidebar-header">114 Surahs</div>
+    <div class="chapter-list" id="chapterList">
+      <div class="center-msg"><div class="spinner"></div></div>
+    </div>
+  </aside>
+  <main id="mainPanel">
+    <div class="center-msg">
+      <div class="big">﷽</div>
+      <p>Select a surah or search in Arabic text</p>
+    </div>
+  </main>
+</div>
+
+<script>
+  const API = '';
+  let chapters = [];
+
+  // POS → CSS class
+  const posClass = {
+    'Noun':'pos-noun','Proper Noun':'pos-noun',
+    'Verb':'pos-verb',
+    'Adjective':'pos-adj',
+    'Preposition':'pos-prep',
+    'Pronoun':'pos-pron','Relative Pronoun':'pos-pron','Demonstrative':'pos-pron','Interrogative':'pos-pron',
+    'Definite Article':'pos-det',
+  };
+  function getPosClass(label) {
+    if (!label) return '';
+    if (posClass[label]) return posClass[label];
+    if (label.includes('Particle') || label.includes('Conjunction') || label.includes('Conj')) return 'pos-part';
+    return 'pos-other';
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────
+  async function init() {
+    const res = await fetch(API + '/api/chapters');
+    chapters = await res.json();
+    renderSidebar(chapters);
+    document.getElementById('statsBar').textContent = '114 surahs · 6236 verses · 77430 tokens';
+  }
+
+  // ── Sidebar ───────────────────────────────────────────────────────
+  function renderSidebar(list) {
+    document.getElementById('chapterList').innerHTML = list.map(ch => `
+      <div class="chapter-item" data-n="${ch.number}" onclick="loadChapter(${ch.number})">
+        <div class="ch-num">${ch.number}</div>
+        <div class="ch-info">
+          <div class="ch-name-en">${ch.nameEnglish}</div>
+          <div class="ch-name-ar">${ch.nameArabic}</div>
+          <div class="ch-meta">${ch.verseCount} verses</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Chapter ───────────────────────────────────────────────────────
+  async function loadChapter(n) {
+    document.querySelectorAll('.chapter-item').forEach(el => el.classList.toggle('active', +el.dataset.n === n));
+    document.getElementById('mainPanel').innerHTML = '<div class="center-msg"><div class="spinner"></div></div>';
+    const res = await fetch(API + '/api/chapter/' + n);
+    renderChapter(await res.json());
+  }
+
+  function renderChapter(ch) {
+    let html = `
+      <div class="chapter-heading">
+        <div class="ar-name">${ch.nameArabic}</div>
+        <div class="en-name">${ch.nameEnglish}</div>
+        <div class="ch-stats">Surah ${ch.number} · ${ch.verseCount} verses</div>
+      </div>`;
+    if (ch.bismillah) html += `<div class="bismillah">${ch.bismillah}</div>`;
+    html += ch.verses.map(v => `
+      <div class="verse" id="v${v.number}" onclick="toggleVerse(${ch.number}, ${v.number})">
+        <div class="verse-num">${v.number}</div>
+        <div style="flex:1">
+          <div class="verse-text">${v.text}</div>
+          <div class="token-panel" id="tp${v.number}"></div>
+        </div>
+      </div>`).join('');
+    document.getElementById('mainPanel').innerHTML = html;
+  }
+
+  // ── Verse expand → tokens ─────────────────────────────────────────
+  async function toggleVerse(ch, v) {
+    const verseEl = document.getElementById('v' + v);
+    const panel   = document.getElementById('tp' + v);
+    if (panel.classList.contains('open')) {
+      panel.classList.remove('open');
+      verseEl.classList.remove('selected');
+      return;
+    }
+    document.querySelectorAll('.token-panel.open').forEach(p => p.classList.remove('open'));
+    document.querySelectorAll('.verse.selected').forEach(p => p.classList.remove('selected'));
+    verseEl.classList.add('selected');
+    panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;direction:ltr;padding:6px 0">Loading tokens…</div>';
+    panel.classList.add('open');
+
+    const res  = await fetch(API + `/api/verse/${ch}/${v}`);
+    const data = await res.json();
+
+    const chips = data.tokens.map(t => {
+      const pc = getPosClass(t.pos);
+      return `<div class="token-chip" id="chip-${ch}-${v}-${t.number}"
+                   onclick="toggleMorph(event,${ch},${v},${t.number})">
+        <span class="t-ar">${t.text}</span>
+        ${t.pos ? `<span class="t-pos ${pc}">${t.pos}</span>` : ''}
+      </div>`;
+    }).join('');
+
+    panel.innerHTML = `
+      <div class="token-list">${chips}</div>
+      <div class="morph-card" id="morph-${ch}-${v}" style="display:none"></div>`;
+  }
+
+  // ── Token morph detail ────────────────────────────────────────────
+  async function toggleMorph(evt, ch, v, t) {
+    evt.stopPropagation();
+    const chipId  = `chip-${ch}-${v}-${t}`;
+    const cardId  = `morph-${ch}-${v}`;
+    const chip    = document.getElementById(chipId);
+    const card    = document.getElementById(cardId);
+
+    if (chip.classList.contains('chip-selected')) {
+      chip.classList.remove('chip-selected');
+      card.style.display = 'none';
+      return;
+    }
+    document.querySelectorAll('.token-chip.chip-selected').forEach(c => c.classList.remove('chip-selected'));
+    chip.classList.add('chip-selected');
+    card.style.display = 'block';
+    card.innerHTML = '<div style="color:var(--muted);font-size:0.78rem">Loading analysis…</div>';
+
+    const res  = await fetch(API + `/api/morph/${ch}/${v}/${t}`);
+    const data = await res.json();
+
+    if (!data.segments || data.segments.length === 0) {
+      card.innerHTML = '<div style="color:var(--muted);font-size:0.78rem">No morphology data for this token.</div>';
+      return;
+    }
+
+    // Feature key labels
+    const keyLabel = { pos:'Part of Speech', lem:'Lemma', root:'Root', type:'Segment', form:'Form',
+                       tag:'Tag', taglabel:'POS Label', segment:'Segment #' };
+    const skipKeys = new Set(['segment','tag','taglabel','type','form','attr_true']);
+
+    card.innerHTML = `<h4>Morphological Analysis — Token ${t}</h4>` +
+      data.segments.map(seg => {
+        const stype = (seg.type || '').toLowerCase();
+        const featHtml = Object.entries(seg)
+          .filter(([k]) => !skipKeys.has(k) && !k.startsWith('attr_'))
+          .map(([k, val]) => {
+            const highlight = ['pos','root','lem'].includes(k);
+            return `<div class="feat-chip${highlight?' highlight':''}">
+              <span class="fk">${keyLabel[k] || k}:</span>${val}
+            </div>`;
+          }).join('');
+
+        return `<div class="seg-block type-${stype}">
+          <div class="seg-type">${seg.type || 'Segment'} ${seg.segment}</div>
+          <div class="seg-form">${seg.form || ''}</div>
+          <div class="feat-grid">${featHtml}</div>
+        </div>`;
+      }).join('');
+  }
+
+  // ── Search ────────────────────────────────────────────────────────
+  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+  async function doSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+    document.querySelectorAll('.chapter-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('mainPanel').innerHTML = '<div class="center-msg"><div class="spinner"></div></div>';
+    const res     = await fetch(API + '/api/search?q=' + encodeURIComponent(q));
+    const results = await res.json();
+    renderSearch(q, results);
+  }
+
+  function renderSearch(q, results) {
+    if (!results.length) {
+      document.getElementById('mainPanel').innerHTML =
+        `<div class="center-msg"><p>No results found for <strong>${q}</strong></p></div>`;
+      return;
+    }
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'g');
+    let html = `<div class="search-header">Found <span>${results.length}</span> result${results.length!==1?'s':''}
+      ${results.length===100?' (first 100)':''}</div>`;
+    html += results.map(r => `
+      <div class="result-item" onclick="loadChapter(${r.chapter})">
+        <div class="result-meta">Surah ${r.chapter} · ${r.chapterName} · Verse ${r.verse}</div>
+        <div class="result-text">${r.text.replace(re, m => `<mark>${m}</mark>`)}</div>
+      </div>`).join('');
+    document.getElementById('mainPanel').innerHTML = html;
+  }
+
+  init();
+</script>
+</body>
+</html>
